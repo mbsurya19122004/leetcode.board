@@ -1,69 +1,118 @@
-import Image from "next/image";
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { serverClient, admin } from '@/lib/supabase'
+import Nav from './nav'
+import Avatar from './avatar'
+import AvatarUploader from './avatar-uploader'
+import { updateProfile, refreshStats, verifyLeetCode } from './actions'
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+export default async function Home({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
+  const { msg } = await searchParams
+  const sb = await serverClient()
+  const { data: { user } } = await sb.auth.getUser()
+  if (!user) redirect('/login')
+  const { data: p } = await admin().from('profiles').select('*').eq('id', user.id).single()
+  if (!p) redirect('/login')
+
+  const editForm = (
+    <details className="edit" open={!p.verified}>
+      <summary>Edit details</summary>
+      <form action={updateProfile} className="panel">
+        <label>Full name<input name="username" defaultValue={p.username} required maxLength={40} /></label>
+        <div className="two">
+          <label>Year<select name="year" defaultValue={p.year}>{[1, 2, 3, 4].map(y => <option key={y} value={y}>Year {y}</option>)}</select></label>
+          <label>Section<input name="section" defaultValue={p.section} required maxLength={10} /></label>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <label>Email<input value={user.email ?? ''} disabled readOnly /></label>
+        {p.verified
+          ? <label>LeetCode id<input value={p.leetcode_username} disabled readOnly /></label>
+          : <label>LeetCode id<input name="leetcode" defaultValue={p.leetcode_username} required /></label>}
+        <small className="dim">
+          {p.verified ? 'Email and LeetCode id are locked: one LeetCode profile per account.' : 'Wrong LeetCode id? Fix it here before verifying.'}
+        </small>
+        <button className="primary">Save changes</button>
+      </form>
+    </details>
+  )
+
+  // ---- not verified yet: ownership check ----
+  if (!p.verified) {
+    return (
+      <main className="wrap">
+        <Nav active="home" />
+        <p className="eyebrow">one more step</p>
+        <h1>Verify your LeetCode profile</h1>
+        {msg && <p className="msg">{msg}</p>}
+        <div className="panel" style={{ marginTop: 20 }}>
+          <p className="dim" style={{ margin: 0 }}>Prove that <b>{p.leetcode_username}</b> is really yours. You only appear on the leaderboard after this.</p>
+          <ol>
+            <li>On LeetCode, open your profile → <b>Edit Profile</b>.</li>
+            <li>Paste this code into the <b>Summary</b> field and save:</li>
+          </ol>
+          <code className="code">{p.verify_code}</code>
+          <form action={verifyLeetCode}><button className="primary">Verify</button></form>
+          <small className="dim">The code is unique to your account. You can delete it from LeetCode once verified.</small>
         </div>
+        {editForm}
       </main>
-    </div>
-  );
+    )
+  }
+
+  const mine = p.total_solved ?? 0
+  const ahead = (q: any) => q.select('id', { count: 'exact', head: true }).eq('year', p.year).gt('total_solved', mine)
+  const desc = { ascending: false, nullsFirst: false }
+  const [sec, yr, { data: top }] = await Promise.all([
+    ahead(sb.from('profiles')).eq('section', p.section),
+    ahead(sb.from('profiles')),
+    sb.from('profiles').select('id, username, total_solved, rating, avatar_url').eq('year', p.year).eq('section', p.section).eq('verified', true)
+      .order('total_solved', desc).order('rating', desc).limit(5),
+  ])
+  const synced = p.synced_at
+    ? new Date(p.synced_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })
+    : 'never'
+
+  const tiles: [string, string | number][] = [
+    ['Solved', p.total_solved ?? '—'],
+    ['Contest rating', p.rating ?? '—'],
+    [`Rank · Section ${p.section}`, `#${(sec.count ?? 0) + 1}`],
+    [`Rank · Year ${p.year}`, `#${(yr.count ?? 0) + 1}`],
+  ]
+
+  return (
+    <main className="wrap">
+      <Nav active="home" />
+      <div className="hero">
+        <Avatar name={p.username} url={p.avatar_url} size={88} />
+        <div>
+          <p className="eyebrow">your profile</p>
+          <h1>Hi, {p.username}</h1>
+          <AvatarUploader hasAvatar={!!p.avatar_url} />
+        </div>
+      </div>
+      {msg && <p className="msg">{msg}</p>}
+
+      <section className="tiles">
+        {tiles.map(([k, v]) => <div key={k} className="tile"><small>{k}</small><strong>{v}</strong></div>)}
+      </section>
+      <p className="dim sub">Easy {p.easy ?? '-'} · Medium {p.medium ?? '-'} · Hard {p.hard ?? '-'} · synced {synced}</p>
+      <form action={refreshStats}><button className="ghost">↻ Refresh my stats</button></form>
+
+      <div className="h2 split">
+        <span>Top of Year {p.year} · Section {p.section}</span>
+        <Link href={`/leaderboard?year=${p.year}&section=${p.section}`}>Full leaderboard →</Link>
+      </div>
+      <div className="list mini">
+        {(top ?? []).map((r, i) => (
+          <div key={r.id} className={`row${r.id === user.id ? ' me' : ''}`}>
+            <span className={i < 3 ? 'rank top' : 'rank'}>{i + 1}</span>
+            <span className="person"><Avatar name={r.username} url={r.avatar_url} size={28} /><span className="who">{r.username}</span></span>
+            <span className="n">{r.total_solved ?? '—'}</span>
+            <span className="n dim">{r.rating ?? '—'}</span>
+          </div>
+        ))}
+      </div>
+
+      {editForm}
+    </main>
+  )
 }
