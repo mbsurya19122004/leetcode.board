@@ -665,3 +665,103 @@ header {
     animation-iteration-count: 1 !important;
   }
 }
+
+.my-rank {
+  margin: 24px 0;
+  padding: 24px;
+  border: 1px solid var(--ac);
+  border-radius: 18px;
+  background:
+    linear-gradient(120deg, var(--hl), transparent 75%),
+    var(--card);
+}
+
+.my-rank-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.my-rank-top h2 {
+  margin: 8px 0 0;
+  font-size: clamp(2rem, 5vw, 3rem);
+  letter-spacing: -0.06em;
+}
+
+.my-rank-top h2 > span {
+  color: var(--ac);
+}
+
+.my-rank-top h2 small {
+  font-size: 0.9rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  color: var(--dim);
+}
+
+.my-rank-caption {
+  margin: 10px 0 0;
+  color: var(--dim);
+  font-size: 0.9rem;
+}
+
+.my-rank-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.my-rank-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.my-rank-stats span {
+  color: var(--dim);
+  font-size: 0.8rem;
+}
+
+.my-rank-stats strong {
+  font-size: 1.15rem;
+  overflow-wrap: anywhere;
+}
+
+.rank-badge {
+  padding: 8px 12px;
+  border: 1px solid var(--ac);
+  border-radius: 999px;
+  color: var(--ac);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .my-rank {
+    padding: 18px;
+  }
+
+  .my-rank-stats {
+    gap: 10px;
+  }
+
+  .my-rank-stats span {
+    font-size: 0.7rem;
+  }
+
+  .my-rank-stats strong {
+    font-size: 0.95rem;
+  }
+
+  .rank-badge {
+    padding: 6px 9px;
+    font-size: 0.6rem;
+  }
+}
