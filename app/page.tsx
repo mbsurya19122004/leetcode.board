@@ -48,7 +48,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ m
           <p className="dim" style={{ margin: 0 }}>Prove that <b>{p.leetcode_username}</b> is really yours. You only appear on the leaderboard after this.</p>
           <ol>
             <li>On LeetCode, open your profile → <b>Edit Profile</b>.</li>
-            <li>Paste this code into the <b>Summary</b> field and save:</li>
+            <li>Paste this code into the <b>Readme</b> field and save:</li>
           </ol>
           <code className="code">{p.verify_code}</code>
           <form action={verifyLeetCode}><button className="primary">Verify</button></form>
