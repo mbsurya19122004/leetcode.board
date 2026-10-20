@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { serverClient, admin } from '@/lib/supabase'
 import Nav from './nav'
+import Landing from './landing'
 import Avatar from './avatar'
 import AvatarUploader from './avatar-uploader'
 import { updateProfile, refreshStats, verifyLeetCode } from './actions'
@@ -10,7 +11,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ m
   const { msg } = await searchParams
   const sb = await serverClient()
   const { data: { user } } = await sb.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) return <Landing />
   const { data: p } = await admin().from('profiles').select('*').eq('id', user.id).single()
   if (!p) redirect('/login')
 
