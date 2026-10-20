@@ -1,8 +1,8 @@
 'use client'
-import { useState } from 'react'
+import { createBrowserClient } from '@supabase/ssr'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
+import { useState } from 'react'
 
 export default function LoginForm({ initialSignup = false }: { initialSignup?: boolean }) {
   const router = useRouter()
@@ -16,8 +16,6 @@ export default function LoginForm({ initialSignup = false }: { initialSignup?: b
     const f = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>
     try {
       if (signup) {
-        const allowed = (process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS ?? '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
-        if (allowed.length && !allowed.includes(f.email.split('@')[1]?.toLowerCase())) throw new Error(`Use your college email (@${allowed.join(', @')})`)
         const body = { username: f.username.trim(), leetcode: f.leetcode.trim() }
         const chk = await fetch('/api/check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
         if (!chk.ok) throw new Error((await chk.json()).error)
@@ -25,8 +23,8 @@ export default function LoginForm({ initialSignup = false }: { initialSignup?: b
           email: f.email, password: f.password,
           options: { data: { username: body.username, leetcode_username: body.leetcode, year: f.year, section: f.section }, emailRedirectTo: `${location.origin}/auth/callback` },
         })
-        if (error) throw new Error(error.message.includes('Database') ? 'Sign-up rejected — use your college email address' : error.message)
-        setMsg('Check your email to confirm your account, then log in to verify your LeetCode profile.')
+        if (error) throw new Error(error.message)
+          setMsg('Check your email to confirm your account, then log in to verify your LeetCode profile.')
       } else {
         const { error } = await sb.auth.signInWithPassword({ email: f.email, password: f.password })
         if (error) throw error
